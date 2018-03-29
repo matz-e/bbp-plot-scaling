@@ -1,5 +1,6 @@
 import argparse
 import functools
+from matplotlib.ticker import FuncFormatter
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -23,12 +24,29 @@ def load_data(fn):
     return data
 
 
+def to_time(x, pos=None):
+    """Convert seconds to time string
+
+    >>> to_time(3600)
+    '1:00:00'
+    >>> to_time(301)
+    '5:01'
+    >>> to_time(301.0)
+    '5:01'
+    """
+    res = []
+    while x > 0:
+        res.append(x % 60)
+        x //= 60
+    return ":".join("{:02}".format(int(i)) for i in reversed(res)).lstrip("0")
+
+
 class CorePlotter(object):
     def __init__(self, data):
         self.data = data
 
     def __call__(self, ax, circuit):
-        values = data[data['Circuit'] == circuit]
+        values = self.data[self.data['Circuit'] == circuit]
         ax = values.plot(x='total # of cores',
                          y='time total',
                          kind='scatter',
@@ -47,5 +65,7 @@ if __name__ == '__main__':
     ax = functools.reduce(CorePlotter(data), circuits, None)
     ax.set_title("Weak Scaling")
     ax.set_xlabel("Number of cores")
-    ax.set_ylabel("Runtime in seconds")
-    plt.savefig("weak.pdf")
+    ax.set_xscale('log', basex=2)
+    ax.set_ylabel("Runtime")
+    ax.yaxis.set_major_formatter(FuncFormatter(to_time))
+    plt.savefig("weak.pdf", bbox_inches='tight')
